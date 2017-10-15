@@ -175,6 +175,7 @@ function initialize() {
       //       }
     });
 
+    //openNav()
 
     //on button press to get conditions at a site
     $( "#get-conditions-here" ).click(function() {

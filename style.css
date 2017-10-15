@@ -34,7 +34,7 @@ html, body {
 
 #site-info{
   /*height: 100%;*/
-  padding: 10px;
+  /*padding: 10px;*/
 }
 
 
@@ -77,17 +77,56 @@ html, body {
 
 /* The side navigation menu */
 .sidenav {
-    height: 100%; /* 100% Full-height */
-    width: 0; /* 0 width - change this with JavaScript */
-    position: fixed; /* Stay in place */
-    z-index: 1; /* Stay on top */
-    top: 0;
-    left: 0;
-    color: #CCC;
-    background-color: #111; /* Black*/
-    overflow-x: hidden; /* Disable horizontal scroll */
-    /*padding-top: 60px; /* Place content 60px from the top */*/
-    transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */
+  font-family: "Roboto";
+  height: 100%; /* 100% Full-height */
+  width: 0; /* 0 width - change this with JavaScript */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Stay on top */
+  top: 0;
+  left: 0;
+  color: #000;
+  background-color: #FFF; /* Black*/
+  overflow-x: hidden; /* Disable horizontal scroll */
+  /*padding-top: 60px; /* Place content 60px from the top */*/
+  transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */
+}
+
+.sidenav-title {
+  font-size: 24px;
+}
+
+.sidenav-desc {
+  font-size: 16px;
+  padding: 8px 20px;
+  font-weight: bold;
+}
+
+.sidenav-quality {
+  font-size: 16px;
+  padding: 8px 20px;
+  display: flex;
+  justify-content: space-between;
+  background: blue;
+  color: white;
+}
+
+.sidenav-metrics-title {
+  font-size: 14px;
+  padding: 8px 20px;
+  border-bottom: 1px solid black;
+  font-weight: bold;
+}
+
+#info-group-0 {
+  font-size: 12px;
+}
+
+#info-group-0 div {
+  padding: 8px 20px;
+}
+
+#cskLink {
+  text-align: center;
 }
 
 /* The navigation menu links */
@@ -160,11 +199,12 @@ button {
     background-color: #444;
 }
 
+/*
 html{
   background-color: #333;
   font: normal 14px Arial, Helvetica;
 }
-
+*/
 
 /* from some site - http://red-team-design.com/how-to-create-a-cool-and-usable-css3-search-box/ */
 
