@@ -177,10 +177,137 @@ function initialize() {
 
     //openNav()
 
+    function handleElevationData(elevationdata) {
+        console.log("SITE ELEVATION DATA:");
+        console.log(elevationdata);
+        elevjson = JSON.parse(elevationdata);
+        elevation = elevjson.results[0].elevation;
+        minElevation = -450; //Dead Sea
+        maxElevation = 8850; //Everest
+
+        if (elevation < -450){ //below lowest dry land on earth
+          elevation = 0; //user clicked on ocean. Give sea level, not sea floor.
+        }
+
+        //Find the percentage of atmosphere above you (up to max of 9000m)
+        //This is integral of atmospheric density as a function of hight, with an offset and scale factor
+        //y = 10.2307542413*exp(-0.000130593 x ) - 3.08
+        //Integrant: -78340.8 e^(-0.000130593 x) - 3.08 x
+        //Double check your math there
+        lower_bound = -78340.8*Math.exp(-0.000130593*minElevation)-3.08*minElevation;
+        selected_elev_val = -78340.8*Math.exp(-0.000130593*elevation)-3.08*elevation;
+        upper_bound = -78340.8*Math.exp(-0.000130593*maxElevation)-3.08*maxElevation;
+
+        area_under = selected_elev_val - lower_bound;
+
+        percent_above = 1 - area_under/(upper_bound-lower_bound);
+
+        console.log(area_under, upper_bound, selected_elev_val, lower_bound);
+        console.log(percent_above);
+    }
+
+    function handleWeatherData(weatherdata) {
+        console.log("SITE WEATHER REPORT:");
+        console.log(weatherdata);
+
+        //set vars for weather data from request
+        var precipProbability = weatherdata.currently.precipProbability
+        var humidity = weatherdata.currently.humidity
+        var visibility = weatherdata.currently.visibility
+        var cloudCover = weatherdata.currently.cloudCover
+        var moonPhase = weatherdata.daily.data[0].moonPhase //0 tells to grab todays phase. allows 0-7
+
+        if (moonPhase > 0.5){
+          moonPhase = (1-moonPhase)/0.5
+        }
+        else{
+          moonPhase = moonPhase/0.5
+        }
+
+        //Populate HTML fields
+        $("#cloudCover").html( Math.round(100*cloudCover) + "%");
+        // $("#visibility").html(visibility);
+        // $("#elevation").html(Math.round(elevation) + " m");
+        $("#humidity").html(Math.round(100*humidity) + "%");
+        $("#precipProbability").html(100*Math.round(precipProbability) + "%");
+        $("#moonPhase").html(Math.round(100*moonPhase) + "% Full");
+
+        function handleLightData(lightpol) {
+            lightPol = lightpol.brightness
+            $("#lightpollution").html(lightpol.brightness);
+            calculate_rating(precipProbability, humidity, visibility, cloudCover, moonPhase, lightPol)
+        }
+
+        //$.get(lightpol_url, handleLightData);
+        handleLightData({
+            brightness: 3,
+        });
+    }
+
+    function handleDistData(dist_data) {
+        try {
+            //Assign vars for time and Distance
+            drive_time = dist_data.rows[0].elements[0].duration.text;
+            drive_dist = dist_data.rows[0].elements[0].distance.text;
+            //populate with approprite time and distance
+            $("#dtime").html(drive_time);
+            $("#ddist").html(drive_dist);
+        }
+        catch(err) {
+            //if no route found, give N/A message
+            $("#dtime").html("N/A");
+            $("#ddist").html("N/A");
+        }
+    }
+
+    function calculate_rating(precipProbability, humidity, visibility, cloudCover, moonPhase, lightPol){
+        //Rate quality based on each parameter
+        precip_quality = (1-Math.sqrt(precipProbability))
+        humid_quality = (Math.pow(-humidity+1,(1/3)))
+        cloud_quality = (1-Math.sqrt(cloudCover))
+        lightpol_quality = (Math.abs(50-lightPol)/50) //should give rating between 0.9995 (Middle of Nowhere) - 0.0646 (Downtown LA)
+
+        console.log("precip: "+ precipProbability + "\t qual: " + precip_quality+"\n",
+                    "humid: "+ humidity + "\t qual: " + humid_quality+"\n",
+                    "cloud: "+ cloudCover + "\t qual: " + cloud_quality+"\n",
+                    "lightpol: "+lightPol+ "\t qual: "+ lightpol_quality+"\n");
+
+        //Find overall site quality
+        // site_quality = (precip_quality * humid_quality * cloud_quality)*100 // to or not to include * (1-moonPhase)
+        site_quality = ((((precip_quality * lightpol_quality * cloud_quality)*8) + (humid_quality*2))/10)*100
+        console.log("qual", site_quality);
+
+        //Determine Site quality description
+        site_quality_discript = ""
+        if (site_quality > 95){
+          site_quality_discript = "Excellent"
+        }
+        else if (site_quality > 90){
+          site_quality_discript = "Very Good"
+        }
+        else if (site_quality > 80) {
+          site_quality_discript = "Good"
+        }
+        else if (site_quality > 50) {
+          site_quality_discript = "Fair"
+        }
+        else if (site_quality > 30) {
+          site_quality_discript = "Poor"
+        }
+        else if (site_quality >= 0){
+          site_quality_discript = "Terrible"
+        }
+        else {
+          site_quality_discript = "Error: Select a site again"
+        }
+
+        //Populate HTML
+        $("#site-rating").html(Math.round(site_quality) + " - " + site_quality_discript );
+    }
+
     //on button press to get conditions at a site
     $( "#get-conditions-here" ).click(function() {
-
-      console.log("URL2:", elevation_url);
+        console.log("URL2:", elevation_url);
 
         $("#dest_coordinates").val("Site Location: " + short_coord(lat_selected) + ", " + short_coord(lon_selected));
         $("#dest_coordinates").select();
@@ -189,140 +316,48 @@ function initialize() {
             openNav()
         }
 
-        $.get(elevation_url, function(elevationdata) {
-            console.log("SITE ELEVATION DATA:");
-            console.log(elevationdata);
-            elevjson = JSON.parse(elevationdata);
-            elevation = elevjson.results[0].elevation;
-            minElevation = -450; //Dead Sea
-            maxElevation = 8850; //Everest
-
-            if (elevation < -450){ //below lowest dry land on earth
-              elevation = 0; //user clicked on ocean. Give sea level, not sea floor.
-            }
-
-            //Find the percentage of atmosphere above you (up to max of 9000m)
-            //This is integral of atmospheric density as a function of hight, with an offset and scale factor
-            //y = 10.2307542413*exp(-0.000130593 x ) - 3.08
-            //Integrant: -78340.8 e^(-0.000130593 x) - 3.08 x
-            //Double check your math there
-            lower_bound = -78340.8*Math.exp(-0.000130593*minElevation)-3.08*minElevation;
-            selected_elev_val = -78340.8*Math.exp(-0.000130593*elevation)-3.08*elevation;
-            upper_bound = -78340.8*Math.exp(-0.000130593*maxElevation)-3.08*maxElevation;
-
-            area_under = selected_elev_val - lower_bound;
-
-            percent_above = 1 - area_under/(upper_bound-lower_bound);
-
-            console.log(area_under, upper_bound, selected_elev_val, lower_bound);
-            console.log(percent_above);
-
+        //$.get(elevation_url, handleElevationData);
+        handleElevationData(JSON.stringify({
+          results: [{
+            elevation: 123,
+          }],
+        }));
+        //$.get(darksky_url, handleWeatherData)
+        handleWeatherData({
+          currently: {
+            precipProbability: 1,
+            humidity: 3,
+            visibility: 3,
+            cloudCover: 3,
+          },
+          daily: {
+            data: [{
+              moonPhase: 0,
+            }],
+          },
         });
-
-        $.get(darksky_url, function(weatherdata) {
-
-            console.log("SITE WEATHER REPORT:");
-            console.log(weatherdata);
-
-            //set vars for weather data from request
-            var precipProbability = weatherdata.currently.precipProbability
-            var humidity = weatherdata.currently.humidity
-            var visibility = weatherdata.currently.visibility
-            var cloudCover = weatherdata.currently.cloudCover
-            var moonPhase = weatherdata.daily.data[0].moonPhase //0 tells to grab todays phase. allows 0-7
-
-            if (moonPhase > 0.5){
-              moonPhase = (1-moonPhase)/0.5
-            }
-            else{
-              moonPhase = moonPhase/0.5
-            }
-
-            //Populate HTML fields
-            $("#cloudCover").html( Math.round(100*cloudCover) + "%");
-            // $("#visibility").html(visibility);
-            // $("#elevation").html(Math.round(elevation) + " m");
-            $("#humidity").html(Math.round(100*humidity) + "%");
-            $("#precipProbability").html(100*Math.round(precipProbability) + "%");
-            $("#moonPhase").html(Math.round(100*moonPhase) + "% Full");
-
-            $.get(lightpol_url, function(lightpol) {
-                lightPol = lightpol.brightness
-                $("#lightpollution").html(lightpol.brightness);
-                calculate_rating(precipProbability, humidity, visibility, cloudCover, moonPhase, lightPol)
-          });
-        })
-
-      function calculate_rating(precipProbability, humidity, visibility, cloudCover, moonPhase, lightPol){
-          //Rate quality based on each parameter
-          precip_quality = (1-Math.sqrt(precipProbability))
-          humid_quality = (Math.pow(-humidity+1,(1/3)))
-          cloud_quality = (1-Math.sqrt(cloudCover))
-          lightpol_quality = (Math.abs(50-lightPol)/50) //should give rating between 0.9995 (Middle of Nowhere) - 0.0646 (Downtown LA)
-
-          console.log("precip: "+ precipProbability + "\t qual: " + precip_quality+"\n",
-                      "humid: "+ humidity + "\t qual: " + humid_quality+"\n",
-                      "cloud: "+ cloudCover + "\t qual: " + cloud_quality+"\n",
-                      "lightpol: "+lightPol+ "\t qual: "+ lightpol_quality+"\n");
-
-          //Find overall site quality
-          // site_quality = (precip_quality * humid_quality * cloud_quality)*100 // to or not to include * (1-moonPhase)
-          site_quality = ((((precip_quality * lightpol_quality * cloud_quality)*8) + (humid_quality*2))/10)*100
-          console.log("qual", site_quality);
-
-          //Determine Site quality description
-          site_quality_discript = ""
-          if (site_quality > 95){
-            site_quality_discript = "Excellent"
-          }
-          else if (site_quality > 90){
-            site_quality_discript = "Very Good"
-          }
-          else if (site_quality > 80) {
-            site_quality_discript = "Good"
-          }
-          else if (site_quality > 50) {
-            site_quality_discript = "Fair"
-          }
-          else if (site_quality > 30) {
-            site_quality_discript = "Poor"
-          }
-          else if (site_quality >= 0){
-            site_quality_discript = "Terrible"
-          }
-          else {
-            site_quality_discript = "Error: Select a site again"
-          }
-
-          //Populate HTML
-          $("#site-rating").html(Math.round(site_quality) + " - " + site_quality_discript );
-      }
-
 
         //Driving Distance/Time request
         dist_url = "http://stargazr.us-west-2.elasticbeanstalk.com/distance"
+        /*
         $.get(dist_url,
           {
             units: "metric",
             origins: lat_start+","+lon_start,
             destinations: lat_selected+","+lon_selected
           },
-          function(dist_data){
-            try {
-              //Assign vars for time and Distance
-              drive_time = dist_data.rows[0].elements[0].duration.text;
-              drive_dist = dist_data.rows[0].elements[0].distance.text;
-              //populate with approprite time and distance
-              $("#dtime").html(drive_time);
-              $("#ddist").html(drive_dist);
-            }
-            catch(err) {
-              //if no route found, give N/A message
-              $("#dtime").html("N/A");
-              $("#ddist").html("N/A");
-            }
-          }
+          handleDistData,
         )
+        */
+        handleDistData({
+          rows: [{
+            elements: [{
+              duration: {text: '1 hour'},
+              distance: {text: '1 mile'},
+            }],
+          }],
+        });
+
         appendCskChart(getClosestStation(lat_selected, lon_selected));
     });
 
