@@ -1,3 +1,7 @@
+// if the browser URL contains "&mock=true", then mock the responses from the
+// server API rather than actually making the requests
+var MOCKING = window.location.search.includes('mock=true');
+
 var map, overlay;
 var initialOpacity = 0.5;
 var OPACITY_MAX_PIXELS = 57; // Width of opacity control image
@@ -238,10 +242,13 @@ function initialize() {
             calculate_rating(precipProbability, humidity, visibility, cloudCover, moonPhase, lightPol)
         }
 
-        //$.get(lightpol_url, handleLightData);
-        handleLightData({
-            brightness: 3,
-        });
+        if (MOCKING) {
+          handleLightData({
+              brightness: .89,
+          });
+        } else {
+          $.get(lightpol_url, handleLightData);
+        }
     }
 
     function handleDistData(dist_data) {
@@ -316,47 +323,50 @@ function initialize() {
             openNav()
         }
 
-        //$.get(elevation_url, handleElevationData);
-        handleElevationData(JSON.stringify({
-          results: [{
-            elevation: 123,
-          }],
-        }));
-        //$.get(darksky_url, handleWeatherData)
-        handleWeatherData({
-          currently: {
-            precipProbability: 1,
-            humidity: 3,
-            visibility: 3,
-            cloudCover: 3,
-          },
-          daily: {
-            data: [{
-              moonPhase: 0,
+        if (MOCKING) {
+          handleElevationData(JSON.stringify({
+            results: [{
+              elevation: 123,
             }],
-          },
-        });
+          }));
 
-        //Driving Distance/Time request
-        dist_url = "http://stargazr.us-west-2.elasticbeanstalk.com/distance"
-        /*
-        $.get(dist_url,
-          {
-            units: "metric",
-            origins: lat_start+","+lon_start,
-            destinations: lat_selected+","+lon_selected
-          },
-          handleDistData,
-        )
-        */
-        handleDistData({
-          rows: [{
-            elements: [{
-              duration: {text: '1 hour'},
-              distance: {text: '1 mile'},
+          handleWeatherData({
+            currently: {
+              precipProbability: 0,
+              humidity: 0,
+              visibility: 3,
+              cloudCover: .01,
+            },
+            daily: {
+              data: [{
+                moonPhase: .105,
+              }],
+            },
+          });
+
+          handleDistData({
+            rows: [{
+              elements: [{
+                duration: {text: '2h 18m'},
+                distance: {text: '106 mi'},
+              }],
             }],
-          }],
-        });
+          });
+        } else {
+          $.get(elevation_url, handleElevationData);
+          $.get(darksky_url, handleWeatherData)
+
+          //Driving Distance/Time request
+          dist_url = "http://stargazr.us-west-2.elasticbeanstalk.com/distance"
+          $.get(dist_url,
+            {
+              units: "metric",
+              origins: lat_start+","+lon_start,
+              destinations: lat_selected+","+lon_selected
+            },
+            handleDistData,
+          );
+        }
 
         appendCskChart(getClosestStation(lat_selected, lon_selected));
     });
